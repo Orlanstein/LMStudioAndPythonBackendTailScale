@@ -47,7 +47,8 @@ pip install -r requirements.txt
 ### 3. Configurar LM Studio
 
 1. Descarga e instala [LM Studio](https://lmstudio.ai/).
-2. Descarga el modelo `Meta-Llama-3.1-8B-Instruct-GGUF` desde LM Studio.
+2. Descarga el modelo `Meta-Llama-3.1-8B-Instruct-GGUF` desde LM Studio
+   del siguiente repositorio [`lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF`](https://huggingface.co/lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF).
 3. Inicia el servidor local en LM Studio en el puerto `1234`.
 
 ### 4. Ejecutar la aplicación
