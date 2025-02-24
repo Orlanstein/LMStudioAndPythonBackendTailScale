@@ -1,6 +1,4 @@
-Aquí tienes la documentación del proyecto en formato **Markdown**. Puedes guardarla en un archivo `README.md` en la raíz de tu proyecto para que otros desarrolladores puedan entender y usar tu aplicación.
 
----
 
 # Orlando Chat - Documentación del Proyecto
 
