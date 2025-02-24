@@ -1,72 +1,119 @@
-function sendMessage() {
-    let userInput = document.getElementById("user-input").value.trim();
-    if (userInput === "") return;
+const Chat = () => {
+    const [messages, setMessages] = React.useState([]);
+    const [inputValue, setInputValue] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
+    const messagesEndRef = React.useRef(null);
 
-    let chatBox = document.getElementById("chat-box");
+    // Scroll to bottom when messages change
+    React.useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
-    // Agregar mensaje del usuario
-    let userMessageDiv = document.createElement("div");
-    userMessageDiv.classList.add("message", "user-message");
-    userMessageDiv.textContent = userInput;
-    chatBox.appendChild(userMessageDiv);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!inputValue.trim() || isLoading) return;
 
-    // Crear un contenedor para el mensaje del bot (vacío al inicio)
-    let botMessageDiv = document.createElement("div");
-    botMessageDiv.classList.add("message", "bot-message");
-    chatBox.appendChild(botMessageDiv);
+        const userMessage = inputValue.trim();
+        setMessages(prev => [...prev, 
+            { role: 'user', content: userMessage },
+            { role: 'assistant', content: '', isLoading: true }
+        ]);
+        setInputValue('');
+        setIsLoading(true);
 
-    // Mostrar indicador de carga
-    let loadingDiv = document.createElement("div");
-    loadingDiv.classList.add("message", "loading");
-    loadingDiv.textContent = "Escribiendo...";
-    chatBox.appendChild(loadingDiv);
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userMessage }),
+            });
 
-    // Desplazamiento automático hacia abajo
-    chatBox.scrollTop = chatBox.scrollHeight;
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to get response');
 
-    // Enviar la petición al servidor Flask
-    fetch("/chat", {
-        method: "POST",
-        body: JSON.stringify({ message: userInput }),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error("Error en la respuesta del servidor");
+            // Simulate typing effect
+            const assistantMessage = data.message;
+            let displayedText = '';
+            for (let i = 0; i < assistantMessage.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, 20));
+                displayedText += assistantMessage[i];
+                setMessages(prev => [
+                    ...prev.slice(0, -1),
+                    { role: 'assistant', content: displayedText, isLoading: false }
+                ]);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            setMessages(prev => [
+                ...prev.slice(0, -1),
+                { role: 'assistant', content: 'Error: ' + error.message, isLoading: false }
+            ]);
+        } finally {
+            setIsLoading(false);
         }
-        return response.json();
-    })
-    .then(data => {
-        // Eliminar el indicador de carga
-        chatBox.removeChild(loadingDiv);
+    };
 
-        // Mostrar la respuesta del bot
-        let botResponse = data.message;
-        typeWriterEffect(botMessageDiv, botResponse);
-    })
-    .catch(error => {
-        // Eliminar el indicador de carga
-        chatBox.removeChild(loadingDiv);
+    return (
+        <div className="flex flex-col h-full">
+    {/* Contenedor de mensajes con altura fija y desplazamiento */}
+    <div className="flex-1 overflow-y-auto space-y-4 p-4">
+        {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-lg p-3 ${
+                    msg.role === 'user' ? 'bg-blue-600' : 'bg-gray-700'
+                }`}>
+                    {msg.isLoading ? (
+                        <div className="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    ) : (
+                        msg.content
+                    )}
+                </div>
+            </div>
+        ))}
+        <div ref={messagesEndRef} />
+    </div>
 
-        // Mostrar mensaje de error
-        botMessageDiv.textContent = "❌ Error: No se pudo obtener una respuesta.";
-        console.error("Error:", error);
-    });
+    {/* Área de entrada de texto */}
+    <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700">
+        <div className="flex gap-2">
+            <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500"
+                disabled={isLoading}
+            />
+            <button
+                type="submit"
+                disabled={isLoading || !inputValue.trim()}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                    isLoading || !inputValue.trim()
+                        ? 'bg-gray-600 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                } text-white transition-colors`}
+            >
+                Send
+            </button>
+        </div>
+    </form>
+</div>
+    );
+};
 
-    document.getElementById("user-input").value = "";
-}
+// Render the app
+const root = ReactDOM.createRoot(document.getElementById('app'));
+root.render(<Chat />);
 
-// Función para efecto de escritura progresiva
-function typeWriterEffect(element, text, index = 0) {
-    if (index < text.length) {
-        element.textContent += text[index];
-        setTimeout(() => typeWriterEffect(element, text, index + 1), 30); // Velocidad de escritura (ajustable)
-    }
-}
-
-// Permitir enviar mensaje con Enter
-function handleKeyPress(event) {
-    if (event.key === "Enter") {
-        sendMessage();
-    }
+// New chat function
+function newChat() {
+    fetch('/new-chat', { method: 'POST' })
+        .then(() => window.location.reload())
+        .catch(err => console.error('Error:', err));
 }
